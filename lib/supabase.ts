@@ -1,3 +1,4 @@
+import 'server-only'
 import { createClient } from '@supabase/supabase-js'
 
 export type ActivityType = 'running' | 'rowing' | 'gym_upper' | 'gym_lower' | 'hiking' | 'weights' | 'other'
@@ -19,7 +20,7 @@ export interface Workout {
   training_zone: TrainingZone | null
   notes: string | null
   source: WorkoutSource
-  raw_data: Record<string, unknown>
+  raw_data: Record<string, unknown> | null
   created_at: string
 }
 
@@ -36,7 +37,13 @@ export interface NutritionEntry {
   created_at: string
 }
 
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    'Missing Supabase env vars: SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env.local'
+  )
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
