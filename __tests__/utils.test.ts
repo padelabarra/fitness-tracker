@@ -6,6 +6,7 @@ import {
   calculateStreak,
   getPhaseTarget,
   formatPace,
+  toISODate,
   cn,
 } from '@/lib/utils'
 
@@ -74,15 +75,16 @@ describe('calculateStreak', () => {
     expect(calculateStreak([])).toBe(0)
   })
   it('returns 1 for single today entry', () => {
-    const today = new Date().toISOString().split('T')[0]
-    expect(calculateStreak([today])).toBe(1)
+    const today = new Date()
+    const todayStr = toISODate(today)
+    expect(calculateStreak([todayStr])).toBe(1)
   })
   it('counts consecutive days ending today', () => {
     const today = new Date()
     const dates = [0, 1, 2].map(d => {
       const dt = new Date(today)
       dt.setDate(dt.getDate() - d)
-      return dt.toISOString().split('T')[0]
+      return toISODate(dt)
     })
     expect(calculateStreak(dates)).toBe(3)
   })
@@ -91,7 +93,7 @@ describe('calculateStreak', () => {
     const d0 = new Date(today)
     const d2 = new Date(today)
     d2.setDate(d2.getDate() - 2)  // gap: day 1 missing
-    const dates = [d0, d2].map(d => d.toISOString().split('T')[0])
+    const dates = [d0, d2].map(d => toISODate(d))
     expect(calculateStreak(dates)).toBe(1)
   })
 })

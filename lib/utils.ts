@@ -10,21 +10,26 @@ export const CALORIE_TARGET = 2200
 export const PROTEIN_TARGET = 150
 
 // Marathon date: first Sunday of September 2026
-export const MARATHON_DATE = new Date('2026-09-06')
+export const MARATHON_DATE = new Date(2026, 8, 6)   // September 6, 2026
 // Training start: anchor point is 2026-03-15 (Sunday before week 1 Monday)
 // Week 1 = Mar 16–22, Week 26 = Marathon week (Sep 6)
-export const TRAINING_START = new Date('2026-03-15')
+export const TRAINING_START = new Date(2026, 2, 15)  // March 15, 2026
 
 // --- Marathon week calculation ---
-export function getMarathonWeek(currentDate: Date = new Date()): number {
+export function getMarathonWeek(currentDate: Date = new Date()): number | null {
   const msPerWeek = 7 * 24 * 60 * 60 * 1000
-  const diff = currentDate.getTime() - TRAINING_START.getTime()
-  return Math.max(1, Math.min(26, Math.floor(diff / msPerWeek) + 1))
+  // Normalize both dates to UTC midnight (date-only) to avoid timezone-offset skew
+  const cur = Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate())
+  const start = Date.UTC(TRAINING_START.getUTCFullYear(), TRAINING_START.getUTCMonth(), TRAINING_START.getUTCDate())
+  const diff = cur - start
+  if (diff < 0) return null
+  return Math.min(26, Math.floor(diff / msPerWeek) + 1)
 }
 
 // --- Phase target km/week ---
 // Returns null for weeks 23+ (pre-race buffer)
 export function getPhaseTarget(week: number): number | null {
+  if (week < 1) return null
   if (week <= 6) return 40
   if (week <= 12) return 55
   if (week <= 18) return 70
@@ -72,7 +77,10 @@ export function calculateStreak(dates: string[]): number {
 
 // --- Date helpers ---
 export function toISODate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 export function startOfWeek(date: Date): Date {
@@ -92,6 +100,7 @@ export function addDays(date: Date, days: number): Date {
 
 export function formatPace(durationMin: number, distanceKm: number): string {
   if (!distanceKm || distanceKm === 0) return '—'
+  if (!durationMin || durationMin <= 0) return '—'
   const paceDecimal = durationMin / distanceKm
   const mins = Math.floor(paceDecimal)
   const secs = Math.round((paceDecimal - mins) * 60)
