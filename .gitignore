@@ -44,3 +44,5 @@ next-env.d.ts
 .env.local
 ingestion/.env
 ingestion/last_sync.txt
+__pycache__
+*.pyc
