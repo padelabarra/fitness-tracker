@@ -56,7 +56,7 @@ def map_activity_type(garmin_type: str) -> str:
 
 def calculate_hr_zone(avg_hr: Optional[int], user_max_hr: int) -> Optional[str]:
     """Compute Z1-Z5 training zone from avg_hr vs user's max HR."""
-    if avg_hr is None:
+    if avg_hr is None or user_max_hr <= 0:
         return None
     pct = avg_hr / user_max_hr
     if pct < 0.60:
@@ -160,15 +160,22 @@ def sync(full: bool = False) -> None:
     for activity in activities:
         row = build_workout_row(activity, user_max_hr)
         if not row['date']:
+            logger.warning(f"Skipping activity {activity.get('activityId')}: missing startTimeLocal")
             continue
 
-        result = sb.table('workouts').upsert(
-            row,
-            on_conflict='garmin_activity_id'
-        ).execute()
-
-        if result.data:
-            new_count += 1
+        try:
+            # garmin_activity_id is a GENERATED ALWAYS AS column (raw_data->>'activity_id').
+            # We don't include it in the row dict — Postgres computes it from raw_data.
+            # on_conflict='garmin_activity_id' tells Supabase to use that generated column's
+            # unique index for dedup detection.
+            result = sb.table('workouts').upsert(
+                row,
+                on_conflict='garmin_activity_id'
+            ).execute()
+            if result.data:
+                new_count += 1
+        except Exception as e:
+            logger.error(f"Failed to upsert activity {activity.get('activityId')}: {e}")
 
     write_last_sync(date.today())
     logger.info(f'Synced {len(activities)} activities. ~{new_count} new.')
@@ -176,4 +183,8 @@ def sync(full: bool = False) -> None:
 
 if __name__ == '__main__':
     full_run = '--full' in sys.argv
-    sync(full=full_run)
+    try:
+        sync(full=full_run)
+    except Exception as e:
+        logger.error(f"Sync failed: {e}")
+        sys.exit(1)
