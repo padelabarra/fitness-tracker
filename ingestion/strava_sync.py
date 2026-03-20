@@ -8,8 +8,8 @@ Usage:
 """
 
 import argparse
-import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -33,6 +33,7 @@ LAST_SYNC_FILE = Path(__file__).parent / "last_sync.txt"
 
 STRAVA_TOKEN_URL      = "https://www.strava.com/oauth/token"
 STRAVA_ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities"
+STRAVA_ACTIVITY_URL   = "https://www.strava.com/api/v3/activities/{id}"
 
 # ── Strava type → schema type ─────────────────────────────────────────────────
 STRAVA_TYPE_MAP: dict[str, str] = {
@@ -80,18 +81,28 @@ def calculate_hr_zone(avg_hr: float | None) -> str | None:
     return "Z5"
 
 
+def fetch_detailed_activity(access_token: str, activity_id: int) -> dict:
+    """Fetch DetailedActivity — has calories + full HR fields."""
+    resp = requests.get(
+        STRAVA_ACTIVITY_URL.format(id=activity_id),
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 def build_workout_row(activity: dict) -> dict:
-    """Transform a Strava activity dict into a DB-ready row."""
+    """Transform a Strava DetailedActivity dict into a DB-ready row."""
     start_dt = datetime.fromisoformat(activity["start_date_local"].replace("Z", "+00:00"))
     date_str  = start_dt.strftime("%Y-%m-%d")
 
-    distance_km = (activity.get("distance") or 0) / 1000
+    distance_km  = (activity.get("distance") or 0) / 1000
     duration_min = round((activity.get("moving_time") or 0) / 60)
-    avg_hr  = activity.get("average_heartrate")
-    max_hr  = activity.get("max_heartrate")
-    cal     = activity.get("kilojoules")
-    # Strava reports kilojoules; approx calories = kJ * 0.239
-    calories = round(cal * 0.239) if cal else activity.get("calories")
+    avg_hr       = activity.get("average_heartrate")
+    max_hr       = activity.get("max_heartrate")
+    # DetailedActivity has calories directly — accurate for all sport types
+    calories = round(activity["calories"]) if activity.get("calories") else None
 
     return {
         "user_id":       "default",
@@ -155,13 +166,22 @@ def sync(full: bool = False) -> None:
     print(f"[strava_sync] fetching activities from {after.date()} → {now.date()}")
     access_token = get_access_token()
     activities   = fetch_activities(access_token, after, now)
-    print(f"[strava_sync] {len(activities)} activities retrieved")
+    print(f"[strava_sync] {len(activities)} activities retrieved — fetching details...")
 
     if not activities:
         write_last_sync()
         return
 
-    rows = [build_workout_row(a) for a in activities]
+    # Fetch DetailedActivity for each (has calories + full HR)
+    detailed = []
+    for i, a in enumerate(activities):
+        detail = fetch_detailed_activity(access_token, a["id"])
+        detailed.append(detail)
+        if (i + 1) % 10 == 0:
+            print(f"[strava_sync]   {i + 1}/{len(activities)} fetched")
+        time.sleep(0.3)  # stay well within rate limits (100 req/15min)
+
+    rows = [build_workout_row(a) for a in detailed]
 
     # Upsert using strava_activity_id (stored in raw_data->>'activity_id')
     result = (
