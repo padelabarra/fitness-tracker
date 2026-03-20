@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { supabase, type MealType } from '@/lib/supabase'
+import { supabase, type MealType, type NutritionSource } from '@/lib/supabase'
 import { toISODate } from '@/lib/utils'
 
 interface LogFoodInput {
@@ -11,6 +11,7 @@ interface LogFoodInput {
   calories_approx?: number
   protein_g?: number
   notes?: string
+  source?: NutritionSource
 }
 
 export async function logFood(input: LogFoodInput) {
@@ -26,7 +27,7 @@ export async function logFood(input: LogFoodInput) {
       calories_approx: input.calories_approx ?? null,
       protein_g: input.protein_g ?? null,
       notes: input.notes ?? null,
-      source: 'manual',
+      source: input.source ?? 'manual',
     })
     .select()
     .single()

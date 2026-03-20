@@ -34,7 +34,7 @@ CREATE TABLE nutrition (
   calories_approx INTEGER,
   protein_g NUMERIC,
   notes TEXT,
-  source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('telegram','manual')),
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('telegram','manual','photo')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

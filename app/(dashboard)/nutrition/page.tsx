@@ -1,7 +1,7 @@
 import { getNutritionForRange, aggregateDailyNutrition } from '@/lib/queries'
 import { addDays, toISODate, CALORIE_TARGET, PROTEIN_TARGET } from '@/lib/utils'
 import { NutritionChart } from '@/components/NutritionChart'
-import { LogFoodDialog } from '@/components/LogFoodDialog'
+import { LogFoodDialog } from '@/components/LogFoodDialogDynamic'
 
 const MEAL_ICONS: Record<string, string> = {
   breakfast: '🌅', lunch: '☀️', dinner: '🌙', snack: '🍎', supplement: '💊'
