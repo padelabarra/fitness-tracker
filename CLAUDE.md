@@ -1,13 +1,13 @@
 # Fitness Tracker — Claude Code Instructions
 
 ## Project Overview
-Marathon training dashboard. Garmin auto-ingestion + manual food logging.
+Marathon training dashboard. Strava auto-ingestion + manual food logging.
 Dashboard in Next.js 15. Data in Supabase.
 
 ## Tech Stack
 - Frontend: Next.js 15 (App Router) + Tailwind + shadcn/ui + Recharts
 - Database: Supabase (PostgreSQL), RLS disabled (single-user v1)
-- Ingestion: Python 3.11 + garminconnect + supabase-py
+- Ingestion: Python 3.11 + requests (Strava API) + supabase-py
 - Deploy: Vercel
 
 ## Database Schema
@@ -33,5 +33,5 @@ Use /opt/anaconda3/bin/python3 (not /usr/bin/python3)
 ## Commands
 - `npm run dev` — local dev
 - `npm run test:run` — unit tests (vitest)
-- `/opt/anaconda3/bin/python3 ingestion/garmin_sync.py` — manual Garmin sync
-- `/opt/anaconda3/bin/python3 ingestion/garmin_sync.py --full` — 90-day backfill
+- `/opt/anaconda3/bin/python3 ingestion/strava_sync.py` — manual Strava sync
+- `/opt/anaconda3/bin/python3 ingestion/strava_sync.py --full` — 90-day backfill

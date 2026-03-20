@@ -11,14 +11,18 @@ CREATE TABLE workouts (
   calories INTEGER,
   training_zone TEXT CHECK (training_zone IN ('Z1','Z2','Z3','Z4','Z5')),
   notes TEXT,
-  source TEXT NOT NULL DEFAULT 'garmin' CHECK (source IN ('garmin','manual')),
+  source TEXT NOT NULL DEFAULT 'strava' CHECK (source IN ('garmin','strava','manual')),
   raw_data JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Generated column for dedup
+-- Generated columns for dedup (garmin = historical, strava = new)
 ALTER TABLE workouts
   ADD COLUMN garmin_activity_id TEXT GENERATED ALWAYS AS (raw_data->>'activity_id') STORED;
+
+ALTER TABLE workouts
+  ADD COLUMN strava_activity_id BIGINT
+    GENERATED ALWAYS AS ((raw_data->>'activity_id')::BIGINT) STORED;
 
 -- nutrition table
 CREATE TABLE nutrition (
@@ -40,7 +44,11 @@ CREATE INDEX workouts_user_date_idx ON workouts(user_id, date);
 CREATE INDEX nutrition_date_idx ON nutrition(date);
 CREATE INDEX nutrition_user_date_idx ON nutrition(user_id, date);
 
--- Dedup index
+-- Dedup indexes
 CREATE UNIQUE INDEX workouts_garmin_activity_idx
   ON workouts(garmin_activity_id)
   WHERE garmin_activity_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS workouts_strava_activity_id_unique
+  ON workouts (strava_activity_id)
+  WHERE strava_activity_id IS NOT NULL;

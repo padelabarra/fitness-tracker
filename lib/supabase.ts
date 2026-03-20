@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export type ActivityType = 'running' | 'rowing' | 'gym_upper' | 'gym_lower' | 'hiking' | 'weights' | 'other'
 export type TrainingZone = 'Z1' | 'Z2' | 'Z3' | 'Z4' | 'Z5'
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'supplement'
-export type WorkoutSource = 'garmin' | 'manual'
+export type WorkoutSource = 'garmin' | 'strava' | 'manual'
 export type NutritionSource = 'telegram' | 'manual'
 
 export interface Workout {
