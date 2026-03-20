@@ -29,12 +29,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 pb-20 md:pb-0">
+      <main className="flex-1 pb-24 md:pb-0">
         {children}
       </main>
 
       {/* Bottom tabs — mobile */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden border-t border-zinc-800 bg-zinc-900 flex">
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden border-t border-zinc-800 bg-zinc-900 flex pb-[env(safe-area-inset-bottom)]">
         {navItems.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
