@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation'
+import { auth } from '@/auth'
 import { getWorkoutsForRange } from '@/lib/queries'
 import { addDays, calculateStreak } from '@/lib/utils'
 import { ConsistencyHeatmap } from '@/components/ConsistencyHeatmap'
@@ -5,21 +7,22 @@ import { ActivityDonut } from '@/components/ActivityDonut'
 import { StatCard } from '@/components/StatCard'
 
 export default async function ConsistencyPage() {
-  const oneYearAgo = addDays(new Date(), -365)
-  const workouts = await getWorkoutsForRange(oneYearAgo, new Date())
+  const session = await auth()
+  if (!session?.user?.id) redirect('/login')
+  const userId = session.user.id
 
-  // Aggregate minutes by date
+  const oneYearAgo = addDays(new Date(), -365)
+  const workouts = await getWorkoutsForRange(oneYearAgo, new Date(), userId)
+
   const minutesByDate = new Map<string, number>()
   for (const w of workouts) {
     minutesByDate.set(w.date, (minutesByDate.get(w.date) ?? 0) + w.duration_min)
   }
   const heatmapData = Array.from(minutesByDate.entries()).map(([date, minutes]) => ({ date, minutes }))
 
-  // Streak
   const dates = workouts.map(w => w.date)
   const currentStreak = calculateStreak(dates)
 
-  // Longest streak
   const sortedDates = [...new Set(dates)].sort()
   let longest = 0, temp = 0
   for (let i = 0; i < sortedDates.length; i++) {
@@ -31,7 +34,6 @@ export default async function ConsistencyPage() {
     longest = Math.max(longest, temp)
   }
 
-  // Activity breakdown
   const activityCounts: Record<string, number> = {}
   for (const w of workouts) {
     activityCounts[w.activity_type] = (activityCounts[w.activity_type] ?? 0) + 1
@@ -40,7 +42,6 @@ export default async function ConsistencyPage() {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
 
-  // Most active month
   const monthCounts: Record<string, number> = {}
   for (const w of workouts) {
     const month = w.date.slice(0, 7)
@@ -58,7 +59,6 @@ export default async function ConsistencyPage() {
         <StatCard label="Most active month" value={mostActiveMonth} />
       </div>
 
-      {/* Heatmap */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 mb-4 overflow-x-auto">
         <h2 className="text-sm font-medium text-zinc-400 mb-4">Last 52 weeks</h2>
         <div className="flex gap-2 text-xs text-zinc-600 mb-2 items-center">
@@ -72,7 +72,6 @@ export default async function ConsistencyPage() {
         <ConsistencyHeatmap data={heatmapData} />
       </div>
 
-      {/* Donut */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <h2 className="text-sm font-medium text-zinc-400 mb-2">Activity breakdown</h2>
         {donutData.length > 0 ? (

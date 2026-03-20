@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { supabase } from '@/lib/supabase'
 import { toISODate } from '@/lib/utils'
+import { auth } from '@/auth'
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack', 'supplement'] as const
 
@@ -15,17 +16,24 @@ function safeCompareSecrets(a: string, b: string): boolean {
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 export async function POST(request: NextRequest) {
-  // Reject if API_SECRET is not configured
-  const expectedSecret = process.env.API_SECRET
-  if (!expectedSecret) {
-    console.error('API_SECRET env var is not set')
-    return NextResponse.json({ error: 'Service misconfigured' }, { status: 503 })
-  }
+  // Determine userId — browser session takes priority, then Telegram API secret
+  let userId: string | null = null
 
-  // Timing-safe auth check
-  const providedSecret = request.headers.get('api-secret') ?? ''
-  if (!safeCompareSecrets(providedSecret, expectedSecret)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await auth()
+  if (session?.user?.id) {
+    userId = session.user.id
+  } else {
+    // Telegram bot path: validate API_SECRET and use USER1_ID as default
+    const expectedSecret = process.env.API_SECRET
+    if (!expectedSecret) {
+      console.error('API_SECRET env var is not set')
+      return NextResponse.json({ error: 'Service misconfigured' }, { status: 503 })
+    }
+    const providedSecret = request.headers.get('api-secret') ?? ''
+    if (!safeCompareSecrets(providedSecret, expectedSecret)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    userId = process.env.USER1_ID ?? 'default'
   }
 
   let body: unknown
@@ -75,7 +83,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from('nutrition')
     .insert({
-      user_id: 'default',
+      user_id: userId,
       date: entryDate,
       meal_type,
       food_description: food_description.trim(),

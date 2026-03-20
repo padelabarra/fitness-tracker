@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync:
+  sync-pablo:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r ingestion/requirements.txt
 
-      - name: Run Strava sync
+      - name: Run Strava sync (pablo)
         run: python3 ingestion/strava_sync.py
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
@@ -31,3 +31,29 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           USER_AGE: ${{ secrets.USER_AGE }}
+          STRAVA_USER_ID: ${{ secrets.USER1_ID }}
+
+  # Uncomment when wife's Strava credentials are ready:
+  # sync-wife:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #         cache: 'pip'
+  #         cache-dependency-path: ingestion/requirements.txt
+  #     - name: Install dependencies
+  #       run: pip install -r ingestion/requirements.txt
+  #     - name: Run Strava sync (wife)
+  #       run: python3 ingestion/strava_sync.py
+  #       env:
+  #         STRAVA_CLIENT_ID: ${{ secrets.WIFE_STRAVA_CLIENT_ID }}
+  #         STRAVA_CLIENT_SECRET: ${{ secrets.WIFE_STRAVA_CLIENT_SECRET }}
+  #         STRAVA_REFRESH_TOKEN: ${{ secrets.WIFE_STRAVA_REFRESH_TOKEN }}
+  #         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  #         SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  #         USER_AGE: ${{ secrets.WIFE_USER_AGE }}
+  #         STRAVA_USER_ID: ${{ secrets.USER2_ID }}

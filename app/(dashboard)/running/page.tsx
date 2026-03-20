@@ -1,12 +1,18 @@
+import { redirect } from 'next/navigation'
+import { auth } from '@/auth'
 import { getWeeklyKmSummary, getRecentRuns } from '@/lib/queries'
 import { getMarathonWeek, MARATHON_DATE, formatPace } from '@/lib/utils'
 import { MarathonChart } from '@/components/MarathonChart'
 import { StatCard } from '@/components/StatCard'
 
 export default async function RunningPage() {
+  const session = await auth()
+  if (!session?.user?.id) redirect('/login')
+  const userId = session.user.id
+
   const [weeklySummary, recentRuns] = await Promise.all([
-    getWeeklyKmSummary(12),
-    getRecentRuns(5),
+    getWeeklyKmSummary(12, userId),
+    getRecentRuns(5, userId),
   ])
 
   const currentWeek = getMarathonWeek(new Date()) ?? 0
@@ -32,7 +38,6 @@ export default async function RunningPage() {
         </p>
       </div>
 
-      {/* Progress bar */}
       <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <div className="flex justify-between text-xs text-zinc-500 mb-2">
           <span>Week {currentWeek}</span>
@@ -50,13 +55,11 @@ export default async function RunningPage() {
         <StatCard label="Total km (5 runs)" value={totalKm.toFixed(1)} unit="km" />
       </div>
 
-      {/* Chart */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 mb-6">
         <h2 className="text-sm font-medium text-zinc-400 mb-4">Weekly km — last 12 weeks</h2>
         <MarathonChart data={weeklySummary} />
       </div>
 
-      {/* Last 5 runs */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <h2 className="text-sm font-medium text-zinc-400 mb-3">Last 5 runs</h2>
         <table className="w-full text-sm">

@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation'
+import { auth } from '@/auth'
 import { getNutritionForRange, aggregateDailyNutrition } from '@/lib/queries'
 import { addDays, toISODate, CALORIE_TARGET, PROTEIN_TARGET } from '@/lib/utils'
 import { NutritionChart } from '@/components/NutritionChart'
@@ -8,10 +10,14 @@ const MEAL_ICONS: Record<string, string> = {
 }
 
 export default async function NutritionPage() {
+  const session = await auth()
+  if (!session?.user?.id) redirect('/login')
+  const userId = session.user.id
+
   const today = toISODate(new Date())
   const fourteenDaysAgo = addDays(new Date(), -13)
 
-  const entries = await getNutritionForRange(fourteenDaysAgo, new Date())
+  const entries = await getNutritionForRange(fourteenDaysAgo, new Date(), userId)
   const todayEntries = entries.filter(e => e.date === today)
   const dailySummary = aggregateDailyNutrition(entries)
 
@@ -28,7 +34,6 @@ export default async function NutritionPage() {
         <LogFoodDialog />
       </div>
 
-      {/* Today's progress */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 mb-4">
         <h2 className="text-sm font-medium text-zinc-400 mb-3">Today</h2>
         <div className="space-y-3">
@@ -53,13 +58,11 @@ export default async function NutritionPage() {
         </div>
       </div>
 
-      {/* 14-day chart */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 mb-4">
         <h2 className="text-sm font-medium text-zinc-400 mb-4">Last 14 days</h2>
         <NutritionChart data={dailySummary} />
       </div>
 
-      {/* Today's meal log */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <h2 className="text-sm font-medium text-zinc-400 mb-3">Today&apos;s meals</h2>
         {todayEntries.length === 0 ? (

@@ -1,20 +1,25 @@
+import { redirect } from 'next/navigation'
+import { auth } from '@/auth'
 import { getWeekStats, getNutritionForRange, getWorkoutsForRange, aggregateDailyNutrition } from '@/lib/queries'
 import { startOfWeek, addDays, toISODate, getMarathonWeek } from '@/lib/utils'
 import { StatCard } from '@/components/StatCard'
 import { WeeklyChart } from '@/components/WeeklyChart'
 
 export default async function OverviewPage() {
+  const session = await auth()
+  if (!session?.user?.id) redirect('/login')
+  const userId = session.user.id
+
   const monday = startOfWeek(new Date())
   const sunday = addDays(monday, 6)
   const currentWeek = getMarathonWeek(new Date())
 
   const [stats, nutritionEntries, workouts] = await Promise.all([
-    getWeekStats(),
-    getNutritionForRange(monday, sunday),
-    getWorkoutsForRange(monday, sunday),
+    getWeekStats(userId),
+    getNutritionForRange(monday, sunday, userId),
+    getWorkoutsForRange(monday, sunday, userId),
   ])
 
-  // Build day-by-day chart data
   const dailyNutrition = aggregateDailyNutrition(nutritionEntries)
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   const chartData = days.map((day, i) => {

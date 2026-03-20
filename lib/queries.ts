@@ -7,12 +7,13 @@ import { toISODate, startOfWeek, addDays, getPhaseTarget, getMarathonWeek, calcu
 export async function getWorkoutsForRange(
   startDate: Date,
   endDate: Date,
+  userId: string,
   activityType?: string
 ): Promise<Workout[]> {
   let query = supabase
     .from('workouts')
     .select('*')
-    .eq('user_id', 'default')
+    .eq('user_id', userId)
     .gte('date', toISODate(startDate))
     .lte('date', toISODate(endDate))
     .order('date', { ascending: false })
@@ -26,15 +27,13 @@ export async function getWorkoutsForRange(
   return data ?? []
 }
 
-export async function getWeeklyKmSummary(weeks: number): Promise<
+export async function getWeeklyKmSummary(weeks: number, userId: string): Promise<
   Array<{ weekStart: string; actualKm: number; targetKm: number | null; weekNumber: number | null }>
 > {
-  // Single range query instead of N serial queries
   const rangeStart = startOfWeek(addDays(new Date(), -(weeks - 1) * 7))
   const rangeEnd = addDays(startOfWeek(new Date()), 6)
-  const allRuns = await getWorkoutsForRange(rangeStart, rangeEnd, 'running')
+  const allRuns = await getWorkoutsForRange(rangeStart, rangeEnd, userId, 'running')
 
-  // Build week buckets for the last N weeks
   const results: Array<{ weekStart: string; actualKm: number; targetKm: number | null; weekNumber: number | null }> = []
 
   for (let i = weeks - 1; i >= 0; i--) {
@@ -59,11 +58,11 @@ export async function getWeeklyKmSummary(weeks: number): Promise<
   return results
 }
 
-export async function getRecentRuns(limit = 5): Promise<Workout[]> {
+export async function getRecentRuns(limit = 5, userId: string): Promise<Workout[]> {
   const { data, error } = await supabase
     .from('workouts')
     .select('*')
-    .eq('user_id', 'default')
+    .eq('user_id', userId)
     .eq('activity_type', 'running')
     .not('distance_km', 'is', null)
     .order('date', { ascending: false })
@@ -73,10 +72,10 @@ export async function getRecentRuns(limit = 5): Promise<Workout[]> {
   return data ?? []
 }
 
-export async function getWorkoutStreak(): Promise<number> {
+export async function getWorkoutStreak(userId: string): Promise<number> {
   const today = new Date()
   const sixtyDaysAgo = addDays(today, -60)
-  const workouts = await getWorkoutsForRange(sixtyDaysAgo, today)
+  const workouts = await getWorkoutsForRange(sixtyDaysAgo, today, userId)
   const dates = workouts.map(w => w.date)
   return calculateStreak(dates)
 }
@@ -85,12 +84,13 @@ export async function getWorkoutStreak(): Promise<number> {
 
 export async function getNutritionForRange(
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  userId: string
 ): Promise<NutritionEntry[]> {
   const { data, error } = await supabase
     .from('nutrition')
     .select('*')
-    .eq('user_id', 'default')
+    .eq('user_id', userId)
     .gte('date', toISODate(startDate))
     .lte('date', toISODate(endDate))
     .order('date', { ascending: false })
@@ -128,14 +128,14 @@ export interface WeekStats {
   streak: number
 }
 
-export async function getWeekStats(): Promise<WeekStats> {
+export async function getWeekStats(userId: string): Promise<WeekStats> {
   const monday = startOfWeek(new Date())
   const sunday = addDays(monday, 6)
 
   const [workouts, nutritionEntries, streak] = await Promise.all([
-    getWorkoutsForRange(monday, sunday),
-    getNutritionForRange(monday, sunday),
-    getWorkoutStreak(),
+    getWorkoutsForRange(monday, sunday, userId),
+    getNutritionForRange(monday, sunday, userId),
+    getWorkoutStreak(userId),
   ])
 
   const kmThisWeek = workouts

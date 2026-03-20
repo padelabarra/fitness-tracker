@@ -28,6 +28,7 @@ SUPABASE_URL      = os.environ["SUPABASE_URL"]
 SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 
 USER_MAX_HR = int(os.getenv("USER_MAX_HR") or (220 - int(os.getenv("USER_AGE", "32"))))
+USER_ID     = os.getenv("STRAVA_USER_ID", "default")
 
 LAST_SYNC_FILE = Path(__file__).parent / "last_sync.txt"
 
@@ -105,7 +106,7 @@ def build_workout_row(activity: dict) -> dict:
     calories = round(activity["calories"]) if activity.get("calories") else None
 
     return {
-        "user_id":       "default",
+        "user_id":       USER_ID,
         "date":          date_str,
         "activity_type": map_activity_type(activity.get("type", "other")),
         "duration_min":  duration_min,

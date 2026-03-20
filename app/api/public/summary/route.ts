@@ -21,6 +21,13 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const days = Math.min(parseInt(searchParams.get('days') ?? '30'), 90);
 
+  // Resolve userId from ?user= param, validated against known users
+  const allowedUsers = [process.env.USER1_ID, process.env.USER2_ID].filter(Boolean) as string[]
+  const requestedUser = searchParams.get('user')
+  const userId = (requestedUser && allowedUsers.includes(requestedUser))
+    ? requestedUser
+    : (process.env.USER1_ID ?? 'default')
+
   const since = new Date();
   since.setDate(since.getDate() - days);
   const sinceStr = since.toISOString().split('T')[0];
@@ -29,7 +36,7 @@ export async function GET(req: NextRequest) {
   const { data: workouts, error: wErr } = await supabase
     .from('workouts')
     .select('date, activity_type, duration_min, distance_km, calories, training_zone, avg_hr')
-    .eq('user_id', 'default')
+    .eq('user_id', userId)
     .gte('date', sinceStr)
     .order('date', { ascending: false });
 
@@ -39,7 +46,7 @@ export async function GET(req: NextRequest) {
   const { data: nutrition, error: nErr } = await supabase
     .from('nutrition')
     .select('date, meal_type, food_description, calories_approx, protein_g')
-    .eq('user_id', 'default')
+    .eq('user_id', userId)
     .gte('date', sinceStr)
     .order('date', { ascending: false });
 

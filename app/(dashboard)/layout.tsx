@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { Activity, BarChart2, Heart, Map } from 'lucide-react'
+import { auth } from '@/auth'
+import { SignOutButton } from '@/components/SignOutButton'
 
 const navItems = [
   { href: '/',             label: 'Overview',     icon: Activity },
@@ -8,7 +10,9 @@ const navItems = [
   { href: '/consistency',  label: 'Consistency',  icon: BarChart2 },
 ]
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth()
+
   return (
     <div className="flex min-h-screen">
       {/* Sidebar — desktop */}
@@ -26,6 +30,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {label}
           </Link>
         ))}
+
+        {/* User info + logout pinned to bottom */}
+        <div className="mt-auto pt-4 border-t border-zinc-800">
+          <p className="text-xs text-zinc-500 px-3 mb-2 truncate">{session?.user?.name}</p>
+          <SignOutButton />
+        </div>
       </aside>
 
       {/* Main content */}

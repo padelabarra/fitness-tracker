@@ -1,11 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { auth } from '@/auth'
 import { supabase, type MealType, type NutritionSource } from '@/lib/supabase'
 import { toISODate } from '@/lib/utils'
 
 interface LogFoodInput {
-  date?: string  // ISO date, defaults to today
+  date?: string
   meal_type: MealType
   food_description: string
   calories_approx?: number
@@ -15,12 +16,16 @@ interface LogFoodInput {
 }
 
 export async function logFood(input: LogFoodInput) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error('Unauthorized')
+  const userId = session.user.id
+
   const date = input.date ?? toISODate(new Date())
 
   const { data, error } = await supabase
     .from('nutrition')
     .insert({
-      user_id: 'default',
+      user_id: userId,
       date,
       meal_type: input.meal_type,
       food_description: input.food_description,
