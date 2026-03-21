@@ -2,19 +2,6 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 
-const USERS = [
-  {
-    id: process.env.USER1_ID!,
-    username: process.env.USER1_USERNAME!,
-    passwordHash: process.env.USER1_PASSWORD_HASH!,
-  },
-  {
-    id: process.env.USER2_ID!,
-    username: process.env.USER2_USERNAME!,
-    passwordHash: process.env.USER2_PASSWORD_HASH!,
-  },
-]
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -27,6 +14,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           username: string
           password: string
         }
+
+        // Leer aquí, en runtime
+        const USERS = [
+          {
+            id: process.env.USER1_ID!,
+            username: process.env.USER1_USERNAME!,
+            passwordHash: process.env.USER1_PASSWORD_HASH!,
+          },
+          {
+            id: process.env.USER2_ID!,
+            username: process.env.USER2_USERNAME!,
+            passwordHash: process.env.USER2_PASSWORD_HASH!,
+          },
+        ]
+
         const user = USERS.find(u => u.username === username)
         if (!user || !user.passwordHash) return null
         const valid = await compare(password, user.passwordHash)

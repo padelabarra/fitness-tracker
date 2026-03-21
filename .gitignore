@@ -46,3 +46,4 @@ ingestion/.env
 ingestion/last_sync.txt
 __pycache__
 *.pyc
+.env*.local
