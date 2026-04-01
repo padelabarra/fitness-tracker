@@ -1,7 +1,10 @@
 import 'server-only'
 import { createClient } from '@supabase/supabase-js'
 
-export type ActivityType = 'running' | 'rowing' | 'gym_upper' | 'gym_lower' | 'hiking' | 'weights' | 'other'
+export type ActivityType =
+  | 'running' | 'rowing' | 'gym_upper' | 'gym_lower' | 'hiking' | 'weights'
+  | 'cycling' | 'swimming' | 'tennis' | 'soccer' | 'boxing' | 'basketball'
+  | 'volleyball' | 'yoga' | 'pilates' | 'crossfit' | 'climbing' | 'other'
 export type TrainingZone = 'Z1' | 'Z2' | 'Z3' | 'Z4' | 'Z5'
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'supplement'
 export type WorkoutSource = 'garmin' | 'strava' | 'manual'

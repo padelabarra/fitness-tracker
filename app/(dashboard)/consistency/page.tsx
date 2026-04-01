@@ -1,18 +1,27 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { getWorkoutsForRange } from '@/lib/queries'
-import { addDays, calculateStreak } from '@/lib/utils'
+import { addDays, startOfWeek, toISODate, calculateStreak } from '@/lib/utils'
 import { ConsistencyHeatmap } from '@/components/ConsistencyHeatmap'
 import { ActivityDonut } from '@/components/ActivityDonut'
 import { StatCard } from '@/components/StatCard'
+import { WeeklyChart } from '@/components/WeeklyChart'
+import { LogActivityDialog } from '@/components/LogActivityDialogDynamic'
 
 export default async function ConsistencyPage() {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
   const userId = session.user.id
 
-  const oneYearAgo = addDays(new Date(), -365)
-  const workouts = await getWorkoutsForRange(oneYearAgo, new Date(), userId)
+  const today = new Date()
+  const oneYearAgo = addDays(today, -365)
+  const monday = startOfWeek(today)
+  const sunday = addDays(monday, 6)
+
+  const [workouts, weekWorkouts] = await Promise.all([
+    getWorkoutsForRange(oneYearAgo, today, userId),
+    getWorkoutsForRange(monday, sunday, userId),
+  ])
 
   const minutesByDate = new Map<string, number>()
   for (const w of workouts) {
@@ -49,14 +58,30 @@ export default async function ConsistencyPage() {
   }
   const mostActiveMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'
 
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const weekChartData = days.map((day, i) => {
+    const date = toISODate(addDays(monday, i))
+    const dayWorkouts = weekWorkouts.filter(w => w.date === date)
+    const calories = dayWorkouts.reduce((sum, w) => sum + (w.calories ?? 0), 0)
+    return { date: day, calories, protein: 0 }
+  })
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-xl font-semibold mb-6">Consistency</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-semibold">Consistency</h1>
+        <LogActivityDialog />
+      </div>
 
       <div className="grid grid-cols-3 gap-3 mb-6">
         <StatCard label="Current streak" value={currentStreak} unit="days" />
         <StatCard label="Longest streak" value={longest} unit="days" />
         <StatCard label="Most active month" value={mostActiveMonth} />
+      </div>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 mb-4">
+        <h2 className="text-sm font-medium text-zinc-400 mb-4">This week — calories burned</h2>
+        <WeeklyChart data={weekChartData} />
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 mb-4 overflow-x-auto">

@@ -128,8 +128,8 @@ export interface WeekStats {
   streak: number
 }
 
-export async function getWeekStats(userId: string): Promise<WeekStats> {
-  const monday = startOfWeek(new Date())
+export async function getWeekStats(userId: string, monday?: Date): Promise<WeekStats> {
+  if (!monday) monday = startOfWeek(new Date())
   const sunday = addDays(monday, 6)
 
   const [workouts, nutritionEntries, streak] = await Promise.all([

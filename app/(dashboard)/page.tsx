@@ -4,18 +4,32 @@ import { getWeekStats, getNutritionForRange, getWorkoutsForRange, aggregateDaily
 import { startOfWeek, addDays, toISODate, getMarathonWeek } from '@/lib/utils'
 import { StatCard } from '@/components/StatCard'
 import { WeeklyChart } from '@/components/WeeklyChart'
+import { WeekNav } from '@/components/WeekNav'
 
-export default async function OverviewPage() {
+function parseMondayParam(weekParam: string | undefined): Date {
+  if (weekParam) {
+    const d = new Date(weekParam + 'T00:00:00')
+    if (!isNaN(d.getTime())) return startOfWeek(d)
+  }
+  return startOfWeek(new Date())
+}
+
+export default async function OverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>
+}) {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
   const userId = session.user.id
 
-  const monday = startOfWeek(new Date())
+  const { week } = await searchParams
+  const monday = parseMondayParam(week)
   const sunday = addDays(monday, 6)
-  const currentWeek = getMarathonWeek(new Date())
+  const currentWeek = getMarathonWeek(monday)
 
   const [stats, nutritionEntries, workouts] = await Promise.all([
-    getWeekStats(userId),
+    getWeekStats(userId, monday),
     getNutritionForRange(monday, sunday, userId),
     getWorkoutsForRange(monday, sunday, userId),
   ])
@@ -34,9 +48,16 @@ export default async function OverviewPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <p className="text-xs text-zinc-500 uppercase tracking-wider">Week {currentWeek ?? '—'} of 26</p>
-        <h1 className="text-xl font-semibold">{weekDates}</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <p className="text-xs text-zinc-500 uppercase tracking-wider">Week {currentWeek ?? '—'} of 26</p>
+          <h1 className="text-xl font-semibold">{weekDates}</h1>
+        </div>
+        <WeekNav
+          monday={toISODate(monday)}
+          weekDates={weekDates}
+          weekNumber={currentWeek}
+        />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

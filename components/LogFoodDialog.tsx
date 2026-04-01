@@ -30,7 +30,7 @@ const EMPTY_FORM: FormState = {
 export function LogFoodDialog() {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [phase, setPhase] = useState<'idle' | 'compressing' | 'uploading' | 'analyzing'>('idle')
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
@@ -41,18 +41,54 @@ export function LogFoodDialog() {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
+  async function compressImage(file: File): Promise<File> {
+    const MAX_PX = 800
+    const QUALITY = 0.7
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const { width, height } = img
+        const scale = Math.min(1, MAX_PX / Math.max(width, height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(width * scale)
+        canvas.height = Math.round(height * scale)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(file); return }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(blob => {
+          if (!blob) { resolve(file); return }
+          resolve(new File([blob], file.name, { type: 'image/jpeg' }))
+        }, 'image/jpeg', QUALITY)
+      }
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')) }
+      img.src = url
+    })
+  }
+
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
     setPreview(URL.createObjectURL(file))
-    setIsAnalyzing(true)
+    setPhase('compressing')
     setAnalyzeError(null)
+
+    let compressed: File
+    try {
+      compressed = await compressImage(file)
+    } catch {
+      compressed = file
+    }
+
+    setPhase('uploading')
 
     try {
       const fd = new FormData()
-      fd.append('image', file)
+      fd.append('image', compressed)
 
+      setPhase('analyzing')
       const res = await fetch('/api/nutrition/analyze-photo', { method: 'POST', body: fd })
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { error?: string }
@@ -77,7 +113,7 @@ export function LogFoodDialog() {
       console.error('Photo analysis failed:', err)
       setAnalyzeError(err instanceof Error ? err.message : 'Analysis failed')
     } finally {
-      setIsAnalyzing(false)
+      setPhase('idle')
     }
   }
 
@@ -107,7 +143,7 @@ export function LogFoodDialog() {
       setForm(EMPTY_FORM)
       setPreview(null)
       setSource('manual')
-      setIsAnalyzing(false)
+      setPhase('idle')
       setAnalyzeError(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
@@ -138,15 +174,12 @@ export function LogFoodDialog() {
               variant="outline"
               className="w-full border-zinc-700 bg-zinc-800 hover:bg-zinc-700 gap-2"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isAnalyzing}
+              disabled={phase !== 'idle'}
             >
-              {isAnalyzing ? (
-                <>
-                  <span className="animate-spin">⟳</span> Analyzing…
-                </>
-              ) : (
-                '📷 Analyze Photo'
-              )}
+              {phase === 'idle' && '📷 Analyze Photo'}
+              {phase === 'compressing' && <><span className="animate-spin">⟳</span> Compressing…</>}
+              {phase === 'uploading' && <><span className="animate-spin">⟳</span> Uploading…</>}
+              {phase === 'analyzing' && <><span className="animate-spin">⟳</span> Analyzing…</>}
             </Button>
             {preview && (
               <div className="mt-2 flex justify-center">
@@ -228,7 +261,7 @@ export function LogFoodDialog() {
               </div>
             </div>
           )}
-          <Button type="submit" disabled={isPending || isAnalyzing} className="w-full">
+          <Button type="submit" disabled={isPending || phase !== 'idle'} className="w-full">
             {isPending ? 'Saving…' : 'Save'}
           </Button>
         </form>
