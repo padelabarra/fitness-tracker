@@ -3,7 +3,7 @@ CREATE TABLE workouts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL DEFAULT 'default',
   date DATE NOT NULL,
-  activity_type TEXT NOT NULL CHECK (activity_type IN ('running','rowing','gym_upper','gym_lower','hiking','weights','other')),
+  activity_type TEXT NOT NULL CHECK (activity_type IN ('running','rowing','gym_upper','gym_lower','hiking','weights','cycling','swimming','tennis','soccer','boxing','basketball','volleyball','yoga','pilates','crossfit','climbing','other')),
   duration_min INTEGER NOT NULL,
   distance_km NUMERIC,
   avg_hr INTEGER,
