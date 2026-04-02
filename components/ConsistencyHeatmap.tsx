@@ -1,5 +1,12 @@
 'use client'
 
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 // Color thresholds based on total active minutes per day
 function getDayColor(minutes: number): string {
   if (minutes === 0) return '#27272a'        // zinc-800
@@ -54,10 +61,11 @@ export function ConsistencyHeatmap({ data }: ConsistencyHeatmapProps) {
       width={52 * stride}
       height={7 * stride}
       style={{ display: 'block', maxWidth: '100%' }}
+      suppressHydrationWarning
     >
       {weeks.map((week, wi) =>
         week.map((day, di) => {
-          const dateStr = day.toISOString().split('T')[0]
+          const dateStr = toLocalDateStr(day)
           const minutes = dataMap.get(dateStr) ?? 0
           const isFuture = day > today
           return (
