@@ -2,9 +2,12 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { getWeekStats, getNutritionForRange, getWorkoutsForRange, aggregateDailyNutrition } from '@/lib/queries'
 import { startOfWeek, addDays, toISODate, getMarathonWeek } from '@/lib/utils'
+import { getLatestDailySnapshot } from '@/lib/garmin-queries'
 import { StatCard } from '@/components/StatCard'
 import { WeeklyChart } from '@/components/WeeklyChart'
 import { WeekNav } from '@/components/WeekNav'
+import { BiometricsCard } from '@/components/BiometricsCard'
+import { WeeklySummaryWidget } from '@/components/WeeklySummaryWidget'
 
 function parseMondayParam(weekParam: string | undefined): Date {
   if (weekParam) {
@@ -23,15 +26,18 @@ export default async function OverviewPage({
   if (!session?.user?.id) redirect('/login')
   const userId = session.user.id
 
+  const isPedro = session.user.id === process.env.USER1_ID
+
   const { week } = await searchParams
   const monday = parseMondayParam(week)
   const sunday = addDays(monday, 6)
   const currentWeek = getMarathonWeek(monday)
 
-  const [stats, nutritionEntries, workouts] = await Promise.all([
+  const [stats, nutritionEntries, workouts, latestSnapshot] = await Promise.all([
     getWeekStats(userId, monday),
     getNutritionForRange(monday, sunday, userId),
     getWorkoutsForRange(monday, sunday, userId),
+    isPedro ? getLatestDailySnapshot(userId) : Promise.resolve(null),
   ])
 
   const dailyNutrition = aggregateDailyNutrition(nutritionEntries)
@@ -71,6 +77,16 @@ export default async function OverviewPage({
         <h2 className="text-sm font-medium text-zinc-400 mb-4">This week</h2>
         <WeeklyChart data={chartData} />
       </div>
+
+      {isPedro && (
+        <div className="grid gap-4 md:grid-cols-2 mt-6">
+          <BiometricsCard
+            snapshot={latestSnapshot}
+            snapshotDate={latestSnapshot?.date ?? new Date().toISOString().split('T')[0]}
+          />
+          <WeeklySummaryWidget userId={session.user.id} />
+        </div>
+      )}
     </div>
   )
 }
