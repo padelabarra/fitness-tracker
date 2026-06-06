@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Activity, BarChart2, Dumbbell, Heart, Map, TrendingUp } from 'lucide-react'
+import { Activity, BarChart2, Dumbbell, Heart, Lightbulb, Map, TrendingUp } from 'lucide-react'
 import { auth } from '@/auth'
 import { SignOutButton } from '@/components/SignOutButton'
 
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/consistency',  label: 'Consistency',  icon: BarChart2 },
   { href: '/activities',   label: 'Activities',   icon: Dumbbell },
   { href: '/performance',  label: 'Performance',  icon: TrendingUp },
+  { href: '/insights',     label: 'Insights',     icon: Lightbulb },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
