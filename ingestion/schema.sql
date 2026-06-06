@@ -52,3 +52,46 @@ CREATE UNIQUE INDEX workouts_garmin_activity_idx
 CREATE UNIQUE INDEX IF NOT EXISTS workouts_strava_activity_id_unique
   ON workouts (strava_activity_id)
   WHERE strava_activity_id IS NOT NULL;
+
+-- garmin_daily_snapshots: one row per user per calendar day
+CREATE TABLE garmin_daily_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  date DATE NOT NULL,
+  steps INTEGER,
+  resting_hr INTEGER,
+  sleep_score INTEGER,
+  sleep_duration_min INTEGER,
+  body_battery_end INTEGER,
+  stress_avg INTEGER,
+  calories_active INTEGER,
+  hrv_last_night NUMERIC,
+  raw_json JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, date)
+);
+
+CREATE INDEX garmin_daily_snapshots_user_date_idx
+  ON garmin_daily_snapshots(user_id, date);
+
+-- garmin_performance: one row per user per day (updates when Garmin recomputes)
+CREATE TABLE garmin_performance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  date DATE NOT NULL,
+  vo2max NUMERIC,
+  hrv_weekly_avg NUMERIC,
+  training_readiness INTEGER,
+  training_load_7d NUMERIC,
+  race_pred_5k_sec INTEGER,
+  race_pred_half_sec INTEGER,
+  race_pred_marathon_sec INTEGER,
+  raw_json JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, date)
+);
+
+CREATE INDEX garmin_performance_user_date_idx
+  ON garmin_performance(user_id, date);
