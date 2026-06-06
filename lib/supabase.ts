@@ -40,6 +40,39 @@ export interface NutritionEntry {
   created_at: string
 }
 
+export interface GarminDailySnapshot {
+  id: string
+  user_id: string
+  date: string             // ISO date YYYY-MM-DD
+  steps: number | null
+  resting_hr: number | null
+  sleep_score: number | null
+  sleep_duration_min: number | null
+  body_battery_end: number | null
+  stress_avg: number | null
+  calories_active: number | null
+  hrv_last_night: number | null
+  raw_json: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface GarminPerformance {
+  id: string
+  user_id: string
+  date: string
+  vo2max: number | null
+  hrv_weekly_avg: number | null
+  training_readiness: number | null
+  training_load_7d: number | null
+  race_pred_5k_sec: number | null
+  race_pred_half_sec: number | null
+  race_pred_marathon_sec: number | null
+  raw_json: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
 const supabaseUrl = process.env.SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_ANON_KEY
 
