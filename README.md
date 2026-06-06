@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fitness Tracker
 
-## Getting Started
+Marathon training dashboard for Pedro and Renatta. Tracks workouts (via Strava), biometrics (via Garmin Connect), and nutrition (manual + Telegram bot + photo).
 
-First, run the development server:
+**Stack:** Next.js 15 · Supabase · Tailwind · shadcn/ui · Recharts · Vercel · GitHub Actions
+
+---
+
+## Features
+
+- **Weekly Overview** — km, active minutes, avg protein, workout streak; week selector
+- **Marathon Progress** — area chart of weekly km vs target across 26-week plan
+- **Nutrition Trends** — 14-day calorie/protein chart; log food manually or via photo (Gemini Vision)
+- **Consistency Heatmap** — 52-week activity heatmap + activity type donut
+- **Garmin Biometrics** _(in progress)_ — steps, sleep score, body battery, resting HR (Pedro only)
+- **Performance** _(in progress)_ — VO2max trend, HRV, training readiness, race predictions
+- **Activities Feed** _(in progress)_ — last 20 activities with HR zones, filters
+
+---
+
+## Local Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm run test:run   # vitest unit tests
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.local.example` and fill in values. Variables marked **existing** are already in Vercel; variables marked **new (Garmin)** are needed for the Garmin integration.
 
-## Learn More
+| Variable | Where | Notes |
+|----------|-------|-------|
+| `SUPABASE_URL` | existing | Supabase project URL |
+| `SUPABASE_ANON_KEY` | existing | Supabase anon key |
+| `AUTH_SECRET` | existing | NextAuth JWT secret |
+| `API_SECRET` | existing | Shared secret for Telegram bot + public API |
+| `GEMINI_API_KEY` | existing | Google Gemini Vision (photo calorie estimation) |
+| `USER1_ID` | existing | `pedro` |
+| `USER1_USERNAME` | existing | `pedro` |
+| `USER1_PASSWORD_HASH` | existing | bcrypt hash |
+| `USER2_ID` | existing | `renatta` |
+| `USER2_USERNAME` | existing | `renatta` |
+| `USER2_PASSWORD_HASH` | existing | bcrypt hash |
+| `STRAVA_CLIENT_ID` | existing | Strava app client ID |
+| `STRAVA_CLIENT_SECRET` | existing | Strava app client secret |
+| `STRAVA_REFRESH_TOKEN` | existing | Pedro's Strava refresh token |
+| `USER_AGE` | existing | Used for HR zone calculation |
+| `GARMIN_EMAIL` | **new (Garmin)** | Garmin Connect email (Pedro) |
+| `GARMIN_PASSWORD` | **new (Garmin)** | Garmin Connect password (Pedro) |
+| `GITHUB_TOKEN` | **new (Garmin)** | PAT with `workflow` scope — for UI sync trigger button |
+| `GITHUB_REPO` | **new (Garmin)** | `padelabarra/fitness-tracker` |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Data Pipeline
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Strava (activities)
+Runs automatically 3×/day via GitHub Actions (`strava-sync.yml` at 06:00, 14:00, 22:00 UTC).
 
-## Deploy on Vercel
+```bash
+# Manual run
+/opt/anaconda3/bin/python3 ingestion/strava_sync.py
+/opt/anaconda3/bin/python3 ingestion/strava_sync.py --full   # 90-day backfill
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Garmin (biometrics) _(in progress)_
+Runs automatically daily at 07:00 UTC via GitHub Actions (`garmin-biometrics.yml`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Manual run
+/opt/anaconda3/bin/python3 ingestion/garmin_biometrics_sync.py
+/opt/anaconda3/bin/python3 ingestion/garmin_biometrics_sync.py --backfill 30
+```
+
+### Telegram Food Bot
+```bash
+/opt/anaconda3/bin/python3 ingestion/telegram_food_bot.py
+```
+
+---
+
+## Garmin MCP (Claude sessions)
+
+One-time setup to give Claude live Garmin Connect access in any Claude Code session:
+
+```bash
+claude mcp add garmin \
+  -e GARMIN_EMAIL=$GARMIN_EMAIL \
+  -e GARMIN_PASSWORD=$GARMIN_PASSWORD \
+  -- npx -y @nicolasvegam/garmin-connect-mcp
+```
+
+---
+
+## Database
+
+Two tables in Supabase (see `ingestion/schema.sql`):
+- `workouts` — Strava activities + manual entries
+- `nutrition` — food log entries (manual, Telegram, photo)
+
+Two tables being added (Garmin integration):
+- `garmin_daily_snapshots` — steps, sleep, body battery, HRV per day
+- `garmin_performance` — VO2max, training readiness, race predictions per day
+
+---
+
+## Deployment
+
+Deployed on Vercel. Push to `main` triggers a production deploy.
+
+See `CLAUDE.md` for full architecture notes and coding rules.

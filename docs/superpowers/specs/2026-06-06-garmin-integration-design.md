@@ -133,11 +133,11 @@ python3 garmin_biometrics_sync.py --backfill 30      # last 30 days
 ```
 
 ### Env vars
-- `GARMIN_EMAIL` — Garmin Connect account email
-- `GARMIN_PASSWORD` — Garmin Connect password
-- `SUPABASE_URL` — already exists
-- `SUPABASE_ANON_KEY` — already exists
-- `GARMIN_USER_ID` — value: "pedro" (user_id to write in DB)
+- `GARMIN_EMAIL` — Garmin Connect account email (new)
+- `GARMIN_PASSWORD` — Garmin Connect password (new)
+- `SUPABASE_URL` — already in env
+- `SUPABASE_ANON_KEY` — already in env
+- User ID is read from `USER1_ID` env var (already = "pedro") — no separate `GARMIN_USER_ID` needed
 
 ---
 
@@ -279,12 +279,20 @@ Shown only if both nutrition AND garmin_daily_snapshots data exist for the user.
 - `ingestion/schema.sql` — add new table DDL
 - `CLAUDE.md` — update with new features
 
-**New env vars:**
-- `GARMIN_EMAIL`
-- `GARMIN_PASSWORD`
-- `GARMIN_USER_ID` (= "pedro")
-- `GITHUB_TOKEN` (PAT with workflow scope, for UI → trigger-sync)
+**Env vars — already in `.env.local` / Vercel (do not re-add):**
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY` — Supabase connection
+- `API_SECRET` — shared API secret for external endpoints
+- `AUTH_SECRET` — NextAuth secret
+- `GEMINI_API_KEY` — photo calorie estimation
+- `USER1_ID` (= "pedro"), `USER1_USERNAME`, `USER2_ID` (= "renatta"), `USER2_USERNAME`
+
+**New env vars to add (`.env.local` locally, Vercel + GH Secrets for CI):**
+- `GARMIN_EMAIL` — Garmin Connect account email
+- `GARMIN_PASSWORD` — Garmin Connect password
+- `GITHUB_TOKEN` — PAT with `workflow` scope (for UI → trigger-sync button)
 - `GITHUB_REPO` (= "padelabarra/fitness-tracker")
+
+> Note: `GARMIN_USER_ID` is not a separate var — use `USER1_ID` ("pedro") already in env.
 
 **New Supabase tables:**
 - `garmin_daily_snapshots`
