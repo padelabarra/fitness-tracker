@@ -86,11 +86,11 @@ Strava activities + manually logged workouts.
 Manual + Telegram + photo-logged food entries.
 - `id`, `user_id`, `date`, `meal_type` (`breakfast`|`lunch`|`dinner`|`snack`|`supplement`), `food_description`, `calories_approx`, `protein_g`, `notes`, `source` (`telegram`|`manual`|`photo`)
 
-### `garmin_daily_snapshots` _(in-progress — Garmin integration)_
+### `garmin_daily_snapshots`
 One row per user per day. Upsert on `(user_id, date)`.
 - `steps`, `resting_hr`, `sleep_score`, `sleep_duration_min`, `body_battery_end`, `stress_avg`, `calories_active`, `hrv_last_night`, `raw_json`
 
-### `garmin_performance` _(in-progress — Garmin integration)_
+### `garmin_performance`
 One row per user per day. Upsert on `(user_id, date)`.
 - `vo2max`, `hrv_weekly_avg`, `training_readiness`, `training_load_7d`, `race_pred_5k_sec`, `race_pred_half_sec`, `race_pred_marathon_sec`, `raw_json`
 
@@ -105,9 +105,9 @@ One row per user per day. Upsert on `(user_id, date)`.
 | `/running` | `running/page.tsx` | All | Marathon Progress — area chart + runs table |
 | `/nutrition` | `nutrition/page.tsx` | All | Nutrition Trends — 14-day chart + Log Food dialog |
 | `/consistency` | `consistency/page.tsx` | All | Consistency Heatmap — 52-week SVG + activity donut |
-| `/performance` | `performance/page.tsx` | Pedro | VO2max, HRV, training readiness, race predictions _(in-progress)_ |
-| `/activities` | `activities/page.tsx` | All | Activity feed from `workouts` table _(in-progress)_ |
-| `/insights` | `insights/page.tsx` | Pedro | Nutrition × training correlation _(stretch)_ |
+| `/performance` | `performance/page.tsx` | Pedro | VO2max, HRV, training readiness, race predictions |
+| `/activities` | `activities/page.tsx` | All | Activity feed from `workouts` table |
+| `/insights` | `insights/page.tsx` | All (data-gated) | Nutrition × training correlation |
 | `/login` | `app/login/page.tsx` | — | Login page |
 
 ### Components (`components/`)
@@ -125,13 +125,15 @@ One row per user per day. Upsert on `(user_id, date)`.
 | `LogActivityDialogDynamic` | Client | Dynamic import wrapper |
 | `WeekNav` | Client | Prev/next week arrows — drives Weekly Overview |
 | `SignOutButton` | Client | Sign-out action |
-| `BiometricsCard` | Client | Steps, resting HR, body battery, sleep — Pedro only _(in-progress)_ |
-| `WeeklySummaryWidget` | Server | Weekly totals + avg sleep + body battery trend _(in-progress)_ |
-| `VO2MaxChart` | Client | Recharts AreaChart of VO2max trend _(in-progress)_ |
-| `HRVWidget` | Client | HRV weekly avg + trend arrow _(in-progress)_ |
-| `TrainingReadinessBadge` | Client | Color-coded readiness score _(in-progress)_ |
-| `RacePredictionsTable` | Server | 5K / Half / Full predictions formatted as pace _(in-progress)_ |
-| `TrainingLoadBar` | Client | 7-day training load bar _(in-progress)_ |
+| `BiometricsCard` | Client | Steps, resting HR, body battery, sleep — Pedro only |
+| `WeeklySummaryWidget` | Server | Weekly totals + avg sleep + body battery trend |
+| `VO2MaxChart` | Client | Recharts AreaChart of VO2max trend |
+| `HRVWidget` | Client | HRV weekly avg + trend arrow + sparkline |
+| `TrainingReadinessBadge` | Server | Color-coded readiness score (green ≥70, yellow ≥40, red <40) |
+| `RacePredictionsTable` | Server | 5K / Half / Full predictions formatted as H:MM:SS + pace |
+| `TrainingLoadBar` | Server | 7-day training load bar (Very Light → Very High) |
+| `ActivityFeed` | Client | Filterable activity list (All / Run / Cycling / Strength / Other) |
+| `InsightsChart` | Client | Protein vs readiness + calories vs body battery combo charts |
 
 ### API Routes (`app/api/`)
 | Route | Method | Auth | Description |
@@ -139,7 +141,7 @@ One row per user per day. Upsert on `(user_id, date)`.
 | `/api/nutrition` | POST | `API_SECRET` header | Log nutrition (Telegram bot) |
 | `/api/nutrition/analyze-photo` | POST | Session | Gemini Vision calorie estimation |
 | `/api/public/summary` | GET | `API_SECRET` header | Public workout + nutrition JSON |
-| `/api/garmin/trigger-sync` | POST | Session (Pedro) | Dispatches GH Actions `workflow_dispatch` _(in-progress)_ |
+| `/api/garmin/trigger-sync` | POST | Session (Pedro) | Dispatches GH Actions `workflow_dispatch` for `garmin-biometrics.yml` |
 
 ### Server Actions (`app/actions/`)
 - `nutrition.ts` — `logFood()`
@@ -148,8 +150,8 @@ One row per user per day. Upsert on `(user_id, date)`.
 ### Library (`lib/`)
 - `supabase.ts` — Supabase client singleton + all TypeScript types (`Workout`, `NutritionEntry`, `GarminDailySnapshot`, `GarminPerformance`)
 - `queries.ts` — Supabase query functions for workouts + nutrition
-- `garmin-queries.ts` — Supabase query functions for Garmin tables _(in-progress)_
-- `utils.ts` — `marathonWeek()`, `currentStreak()`, `phaseTargets()`, `formatPace()`, timezone-safe date helpers
+- `garmin-queries.ts` — Supabase query functions for Garmin tables (`getLatestDailySnapshot`, `getDailySnapshots`, `getLatestPerformance`, `getPerformanceTrend`)
+- `utils.ts` — `marathonWeek()`, `currentStreak()`, `phaseTargets()`, `formatPace()`, `formatSecondsAsTime()`, `formatPaceFromSeconds()`, timezone-safe date helpers
 
 ### Auth (`auth.ts`, `middleware.ts`)
 - NextAuth v5 Credentials provider; JWT sessions
@@ -166,9 +168,10 @@ One row per user per day. Upsert on `(user_id, date)`.
 - `--full` flag for 90-day backfill
 - Env: `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `USER_AGE`
 
-### `garmin_biometrics_sync.py` _(in-progress)_
+### `garmin_biometrics_sync.py`
 - Uses `garminconnect` library (same as `garmin_sync.py`)
 - Fetches: daily summary, sleep, HRV, VO2max, training readiness, training load, race predictions
+- Each API call wrapped independently — partial failures degrade gracefully
 - Upserts `garmin_daily_snapshots` + `garmin_performance` for `USER1_ID` (Pedro)
 - `--date YYYY-MM-DD` for specific date; `--backfill N` for N-day backfill
 - Env: `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `USER1_ID`
@@ -183,7 +186,7 @@ One row per user per day. Upsert on `(user_id, date)`.
 | Workflow | Schedule | Purpose |
 |----------|----------|---------|
 | `.github/workflows/strava-sync.yml` | 06:00, 14:00, 22:00 UTC | Strava activity ingestion (Pedro; Renatta slot commented out) |
-| `.github/workflows/garmin-biometrics.yml` | 07:00 UTC | Garmin biometrics sync (Pedro only) _(in-progress)_ |
+| `.github/workflows/garmin-biometrics.yml` | 07:00 UTC | Garmin biometrics sync (Pedro only) |
 
 Both workflows support `workflow_dispatch` for manual triggers.
 
@@ -220,8 +223,9 @@ Use `/opt/anaconda3/bin/python3` (not `/usr/bin/python3`)
 - `npm run test:run` — unit tests (vitest)
 - `/opt/anaconda3/bin/python3 ingestion/strava_sync.py` — manual Strava sync
 - `/opt/anaconda3/bin/python3 ingestion/strava_sync.py --full` — 90-day Strava backfill
-- `/opt/anaconda3/bin/python3 ingestion/garmin_biometrics_sync.py` — manual Garmin sync _(in-progress)_
-- `/opt/anaconda3/bin/python3 ingestion/garmin_biometrics_sync.py --backfill 30` — 30-day Garmin backfill _(in-progress)_
+- `/opt/anaconda3/bin/python3 ingestion/garmin_biometrics_sync.py` — manual Garmin sync (today)
+- `/opt/anaconda3/bin/python3 ingestion/garmin_biometrics_sync.py --date 2026-06-01` — specific date
+- `/opt/anaconda3/bin/python3 ingestion/garmin_biometrics_sync.py --backfill 30` — 30-day backfill
 
 ### Garmin MCP (Claude sessions only)
 ```bash
@@ -239,7 +243,8 @@ After setup, Claude can call `get_daily_summary`, `get_sleep_data`, `get_hrv`, `
 - RLS is disabled (single-user v1); needs enabling for multi-user production
 - Renatta's Strava sync slot is pre-wired in `strava-sync.yml` but commented out pending her credentials
 - `activity_type` check constraint covers all Strava sport types
-- Garmin tables (`garmin_daily_snapshots`, `garmin_performance`) not yet created — pending implementation
+- **Garmin tables must be created manually** — run the DDL from `ingestion/schema.sql` in Supabase SQL Editor (the `garmin_daily_snapshots` and `garmin_performance` CREATE TABLE statements)
+- **Garmin env vars must be added** — add `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `GITHUB_TOKEN`, `GITHUB_REPO` to `.env.local`, Vercel dashboard, and GitHub Secrets
 - Historical `workouts` rows may have `user_id = "default"` from before multi-user migration
 
 ---
