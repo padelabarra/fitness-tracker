@@ -31,7 +31,7 @@ export function VO2MaxChart({ data }: Props) {
           <AreaChart data={chartData}>
             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
             <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(v: number) => [v?.toFixed(1), 'VO2 Max']} />
+            <Tooltip formatter={(v) => [typeof v === 'number' ? v.toFixed(1) : v, 'VO2 Max']} />
             <Area type="monotone" dataKey="vo2max" stroke="#6366f1" fill="#6366f120" strokeWidth={2} dot={false} />
           </AreaChart>
         </ResponsiveContainer>
