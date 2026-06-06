@@ -106,3 +106,20 @@ export function formatPace(durationMin: number, distanceKm: number): string {
   const secs = Math.round((paceDecimal - mins) * 60)
   return `${mins}:${secs.toString().padStart(2, '0')} /km`
 }
+
+export function formatSecondsAsTime(seconds: number | null): string {
+  if (seconds === null) return '—'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+export function formatPaceFromSeconds(totalSec: number | null, distanceKm: number): string {
+  if (!totalSec) return '—'
+  const secPerKm = totalSec / distanceKm
+  const m = Math.floor(secPerKm / 60)
+  const s = Math.round(secPerKm % 60)
+  return `${m}:${String(s).padStart(2, '0')}/km`
+}

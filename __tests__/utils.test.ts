@@ -8,6 +8,8 @@ import {
   formatPace,
   toISODate,
   cn,
+  formatSecondsAsTime,
+  formatPaceFromSeconds,
 } from '@/lib/utils'
 
 describe('constants', () => {
@@ -95,5 +97,27 @@ describe('calculateStreak', () => {
     d2.setDate(d2.getDate() - 2)  // gap: day 1 missing
     const dates = [d0, d2].map(d => toISODate(d))
     expect(calculateStreak(dates)).toBe(1)
+  })
+})
+
+describe('formatSecondsAsTime', () => {
+  it('formats sub-hour as mm:ss', () => {
+    expect(formatSecondsAsTime(305)).toBe('5:05')
+  })
+  it('formats hours correctly', () => {
+    expect(formatSecondsAsTime(3723)).toBe('1:02:03')
+  })
+  it('returns — for null', () => {
+    expect(formatSecondsAsTime(null)).toBe('—')
+  })
+})
+
+describe('formatPaceFromSeconds', () => {
+  it('calculates pace per km correctly for 5K', () => {
+    // 1200 seconds / 5 km = 240 sec/km = 4:00/km
+    expect(formatPaceFromSeconds(1200, 5)).toBe('4:00/km')
+  })
+  it('returns — for null', () => {
+    expect(formatPaceFromSeconds(null, 5)).toBe('—')
   })
 })
