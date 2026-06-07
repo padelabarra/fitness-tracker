@@ -34,13 +34,16 @@ def fetch_daily_snapshot(garmin, date_str: str) -> dict:
     snapshot: dict = {}
     raw: dict = {}
 
+    def _int(val):
+        return int(val) if val is not None else None
+
     try:
         stats = garmin.get_stats(date_str)
         snapshot.update({
-            'steps': stats.get('totalSteps'),
-            'resting_hr': stats.get('restingHeartRate'),
-            'calories_active': stats.get('activeKilocalories'),
-            'stress_avg': stats.get('averageStressLevel'),
+            'steps': _int(stats.get('totalSteps')),
+            'resting_hr': _int(stats.get('restingHeartRate')),
+            'calories_active': _int(stats.get('activeKilocalories')),
+            'stress_avg': _int(stats.get('averageStressLevel')),
         })
         raw['stats'] = stats
     except Exception as e:
@@ -54,8 +57,8 @@ def fetch_daily_snapshot(garmin, date_str: str) -> dict:
         overall = scores.get('overall')
         score_val = overall.get('value') if isinstance(overall, dict) else overall
         snapshot.update({
-            'sleep_score': score_val,
-            'sleep_duration_min': round(sleep_seconds / 60) if sleep_seconds else None,
+            'sleep_score': _int(score_val),
+            'sleep_duration_min': int(round(sleep_seconds / 60)) if sleep_seconds else None,
         })
         raw['sleep'] = sleep
     except Exception as e:
@@ -63,7 +66,7 @@ def fetch_daily_snapshot(garmin, date_str: str) -> dict:
 
     try:
         hrv = garmin.get_hrv_data(date_str)
-        hrv_summary = hrv.get('hrvSummary') or {}
+        hrv_summary = (hrv or {}).get('hrvSummary') or {}
         snapshot['hrv_last_night'] = hrv_summary.get('lastNight')
         raw['hrv'] = hrv
     except Exception as e:
@@ -110,7 +113,7 @@ def fetch_performance(garmin, date_str: str) -> dict:
         logger.warning(f"Training readiness failed for {date_str}: {e}")
 
     try:
-        status = garmin.get_training_status(date_str, date_str)
+        status = garmin.get_training_status(date_str)
         if isinstance(status, list) and status:
             status = status[0]
         if isinstance(status, dict):
