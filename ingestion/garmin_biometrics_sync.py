@@ -15,7 +15,8 @@ from datetime import date, timedelta
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path='.env.local', override=True)
+load_dotenv()  # fallback to .env
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
