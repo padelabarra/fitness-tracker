@@ -15,13 +15,14 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+load_dotenv(dotenv_path='.env.local', override=True)
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 # --- Module-level constants (no env vars) ---
-LAST_SYNC_FILE = Path(__file__).parent / 'last_sync.txt'
+LAST_SYNC_FILE = Path(__file__).parent / 'garmin_activity_last_sync.txt'
 BACKFILL_DAYS = 90
 INCREMENTAL_DAYS = 2
 
@@ -43,13 +44,30 @@ def map_activity_type(garmin_type: str) -> str:
     mapping = {
         'running': 'running',
         'indoor_running': 'running',
+        'treadmill_running': 'running',
         'trail_running': 'running',
+        'virtual_run': 'running',
         'rowing': 'rowing',
         'indoor_rowing': 'rowing',
         'strength_training': 'weights',
         'weight_training': 'weights',
         'functional_strength_training': 'weights',
         'hiking': 'hiking',
+        'walking': 'hiking',
+        'cycling': 'cycling',
+        'indoor_cycling': 'cycling',
+        'virtual_ride': 'cycling',
+        'swimming': 'swimming',
+        'open_water_swimming': 'swimming',
+        'tennis': 'tennis',
+        'tennis_v2': 'tennis',
+        'soccer': 'soccer',
+        'basketball': 'basketball',
+        'yoga': 'yoga',
+        'pilates': 'pilates',
+        'boxing': 'boxing',
+        'crossfit': 'crossfit',
+        'climbing': 'climbing',
     }
     return mapping.get(garmin_type.lower(), 'other')
 
@@ -103,16 +121,18 @@ def build_workout_row(activity: dict, user_max_hr: int) -> dict:
     distance_m = activity.get('distance')
     garmin_type = (activity.get('activityType', {}) or {}).get('typeKey', 'other')
 
+    user_id = os.getenv('USER1_ID', 'pedro')
     return {
-        'user_id': 'default',
+        'user_id': user_id,
         'date': activity.get('startTimeLocal', '')[:10],
         'activity_type': map_activity_type(garmin_type),
         'duration_min': round(duration_secs / 60) if duration_secs else 0,
         'distance_km': round(distance_m / 1000, 2) if distance_m else None,
         'avg_hr': int(avg_hr) if avg_hr else None,
         'max_hr': int(max_hr_val) if max_hr_val else None,
-        'calories': activity.get('calories'),
+        'calories': int(activity['calories']) if activity.get('calories') is not None else None,
         'training_zone': calculate_hr_zone(int(avg_hr) if avg_hr else None, user_max_hr),
+        'notes': activity.get('activityName'),
         'source': 'garmin',
         'raw_data': {'activity_id': str(activity.get('activityId', ''))},
     }
@@ -126,6 +146,7 @@ def sync(full: bool = False) -> None:
     garmin_password = _require_env('GARMIN_PASSWORD')
     supabase_url = _require_env('SUPABASE_URL')
     supabase_key = _require_env('SUPABASE_ANON_KEY')
+    _require_env('USER1_ID')  # ensures it's set; build_workout_row reads it via os.getenv
     user_max_hr = int(os.getenv('USER_MAX_HR') or 0) or (220 - int(os.getenv('USER_AGE', '32')))
 
     last_sync = read_last_sync()

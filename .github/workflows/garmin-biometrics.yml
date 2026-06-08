@@ -46,3 +46,13 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           USER1_ID: ${{ secrets.USER1_ID }}
+
+      - name: Sync Garmin activities
+        run: python3 ingestion/garmin_sync.py
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          USER1_ID: ${{ secrets.USER1_ID }}
+          USER_AGE: ${{ secrets.USER_AGE }}
