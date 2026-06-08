@@ -44,6 +44,8 @@ def fetch_daily_snapshot(garmin, date_str: str) -> dict:
             'resting_hr': _int(stats.get('restingHeartRate')),
             'calories_active': _int(stats.get('activeKilocalories')),
             'stress_avg': _int(stats.get('averageStressLevel')),
+            # bodyBatteryMostRecentValue is reliably in stats; more stable than get_body_battery()
+            'body_battery_end': _int(stats.get('bodyBatteryMostRecentValue')),
         })
         raw['stats'] = stats
     except Exception as e:
@@ -71,18 +73,6 @@ def fetch_daily_snapshot(garmin, date_str: str) -> dict:
         raw['hrv'] = hrv
     except Exception as e:
         logger.warning(f"HRV data failed for {date_str}: {e}")
-
-    try:
-        bb_data = garmin.get_body_battery(date_str, date_str)
-        if bb_data:
-            for entry in reversed(bb_data):
-                stat_list = entry.get('bodyBatteryStatList') or []
-                if stat_list:
-                    snapshot['body_battery_end'] = stat_list[-1].get('bodyBatteryLevel')
-                    break
-        raw['body_battery'] = bb_data
-    except Exception as e:
-        logger.warning(f"Body battery failed for {date_str}: {e}")
 
     snapshot['raw_json'] = raw
     return snapshot
