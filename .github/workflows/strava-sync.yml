@@ -6,6 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Strava sync disabled — jobs are commented out below"
+
   # Pedro uses Garmin as primary activity source (garmin-biometrics.yml).
   # Uncomment sync-pablo to re-enable if Strava is needed again.
   # sync-pablo:
