@@ -29,7 +29,7 @@ jobs:
           cache-dependency-path: ingestion/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r ingestion/requirements.txt
+        run: pip install --prefer-binary -r ingestion/requirements.txt
 
       - name: Sync Garmin biometrics
         run: |
