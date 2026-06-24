@@ -15,6 +15,8 @@ export interface TrendPoint {
   value: number | null
 }
 
+export type FormatType = 'fixed1' | 'hours' | 'locale'
+
 interface Props {
   title: string
   unit?: string
@@ -22,7 +24,14 @@ interface Props {
   color?: string
   type?: ChartType
   domain?: [number | 'auto', number | 'auto']
-  formatter?: (v: number) => string
+  format?: FormatType
+}
+
+function applyFormat(v: number, format: FormatType | undefined, unit: string | undefined): string {
+  if (format === 'fixed1') return `${v.toFixed(1)}${unit ? ` ${unit}` : ''}`
+  if (format === 'hours') return `${v.toFixed(1)} hrs`
+  if (format === 'locale') return v.toLocaleString()
+  return `${v}${unit ? ` ${unit}` : ''}`
 }
 
 export function TrendChart({
@@ -32,7 +41,7 @@ export function TrendChart({
   color = '#6366f1',
   type = 'area',
   domain = ['auto', 'auto'],
-  formatter,
+  format,
 }: Props) {
   const chartData = data
     .filter(d => d.value !== null)
@@ -41,8 +50,7 @@ export function TrendChart({
   const tooltipFormatter = (v: unknown) => {
     const num = typeof v === 'number' ? v : null
     if (num === null) return ['—', title]
-    const label = formatter ? formatter(num) : `${num}${unit ? ` ${unit}` : ''}`
-    return [label, title]
+    return [applyFormat(num, format, unit), title]
   }
 
   const label = unit ? `${title} (${unit})` : title

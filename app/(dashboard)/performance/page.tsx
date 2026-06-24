@@ -73,7 +73,7 @@ export default async function PerformancePage() {
             color="#6366f1"
             type="area"
             domain={[45, 'auto']}
-            formatter={v => v.toFixed(1)}
+            format="fixed1"
           />
           <TrendChart
             title="Training Readiness"
@@ -134,7 +134,7 @@ export default async function PerformancePage() {
             data={sleepDurData}
             color="#06b6d4"
             type="bar"
-            formatter={v => `${v.toFixed(1)} hrs`}
+            format="hours"
           />
           <TrendChart
             title="Stress Level"
@@ -156,7 +156,7 @@ export default async function PerformancePage() {
             data={stepsData}
             color="#10b981"
             type="bar"
-            formatter={v => v.toLocaleString()}
+            format="locale"
           />
           <TrendChart
             title="Active Calories"
