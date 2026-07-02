@@ -38,7 +38,8 @@ jobs:
           elif [ -n "${{ github.event.inputs.date }}" ]; then
             python3 ingestion/garmin_biometrics_sync.py --date ${{ github.event.inputs.date }}
           else
-            python3 ingestion/garmin_biometrics_sync.py
+            # Rolling 7-day window so late watch syncs get picked up automatically
+            python3 ingestion/garmin_biometrics_sync.py --backfill 7
           fi
         env:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}

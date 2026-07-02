@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # --- Module-level constants (no env vars) ---
 LAST_SYNC_FILE = Path(__file__).parent / 'garmin_activity_last_sync.txt'
 BACKFILL_DAYS = 90
-INCREMENTAL_DAYS = 2
+INCREMENTAL_DAYS = 7
 
 
 # --- Env-var helper (called at runtime, not at import) ---
