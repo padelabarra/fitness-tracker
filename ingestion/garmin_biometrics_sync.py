@@ -39,11 +39,14 @@ def fetch_daily_snapshot(garmin, date_str: str) -> dict:
 
     try:
         stats = garmin.get_stats(date_str)
+        stress_raw = stats.get('averageStressLevel')
+        # Garmin returns -1 as a sentinel meaning "no stress data" — treat as None
+        stress = _int(stress_raw) if (stress_raw is not None and stress_raw != -1) else None
         snapshot.update({
             'steps': _int(stats.get('totalSteps')),
             'resting_hr': _int(stats.get('restingHeartRate')),
             'calories_active': _int(stats.get('activeKilocalories')),
-            'stress_avg': _int(stats.get('averageStressLevel')),
+            'stress_avg': stress,
             # bodyBatteryMostRecentValue is reliably in stats; more stable than get_body_battery()
             'body_battery_end': _int(stats.get('bodyBatteryMostRecentValue')),
         })
@@ -84,14 +87,32 @@ def fetch_performance(garmin, date_str: str) -> dict:
     raw: dict = {}
 
     try:
-        metrics = garmin.get_max_metrics(date_str)
-        if isinstance(metrics, list) and metrics:
-            metrics = metrics[0]
-        generic = metrics.get('generic') or {} if isinstance(metrics, dict) else {}
-        perf['vo2max'] = generic.get('vo2MaxPreciseValue')
-        raw['max_metrics'] = metrics
+        # get_training_status returns a nested dict with vo2max + training load;
+        # get_max_metrics is unreliable (often returns []).
+        status = garmin.get_training_status(date_str)
+        raw['training_status'] = status
+
+        if isinstance(status, dict):
+            # VO2max lives under mostRecentVO2Max.generic
+            vo2_generic = (status.get('mostRecentVO2Max') or {}).get('generic') or {}
+            perf['vo2max'] = vo2_generic.get('vo2MaxPreciseValue')
+
+            # Training load: iterate device map, pick primary device
+            load_map = (
+                (status.get('mostRecentTrainingStatus') or {})
+                .get('latestTrainingStatusData') or {}
+            )
+            for device_data in load_map.values():
+                if not isinstance(device_data, dict):
+                    continue
+                atl = device_data.get('acuteTrainingLoadDTO') or {}
+                # dailyTrainingLoadChronic is the rolling 7-day average load
+                load = atl.get('dailyTrainingLoadChronic') or atl.get('dailyTrainingLoadAcute')
+                if load is not None:
+                    perf['training_load_7d'] = load
+                    break
     except Exception as e:
-        logger.warning(f"VO2max failed for {date_str}: {e}")
+        logger.warning(f"Training status failed for {date_str}: {e}")
 
     try:
         readiness = garmin.get_training_readiness(date_str)
@@ -101,17 +122,6 @@ def fetch_performance(garmin, date_str: str) -> dict:
         raw['training_readiness'] = readiness
     except Exception as e:
         logger.warning(f"Training readiness failed for {date_str}: {e}")
-
-    try:
-        status = garmin.get_training_status(date_str)
-        if isinstance(status, list) and status:
-            status = status[0]
-        if isinstance(status, dict):
-            perf['training_load_7d'] = status.get('acuteTrainingLoad') or status.get('trainingLoad7Days')
-            perf['hrv_weekly_avg'] = status.get('hrvWeeklyAverage')
-        raw['training_status'] = status
-    except Exception as e:
-        logger.warning(f"Training status failed for {date_str}: {e}")
 
     try:
         pred = garmin.get_race_predictions()
